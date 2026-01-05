@@ -35,19 +35,26 @@ void publish() {
         return;
     }
 
-    // Static Registry Publish Flow
-    // 1. Check if registry repo is cloned locally (or ask user for path)
-    // 2. Copy tarball to packages/<name>/<version>.tar.gz
-    // 3. Update metadata.json
-    
-    const char* registryPathEnv = std::getenv("DUCK_REGISTRY_PATH");
-    std::string registryPath = registryPathEnv ? registryPathEnv : "../duck-registry";
-    
+    // Automated GitHub Registry Publish Flow
+    std::string home = std::getenv("HOME");
+    std::string registryPath = home + "/.duck/registry";
+    std::string registryUrl = "https://github.com/tspp-io/duck-registry.git";
+
     if (!std::filesystem::exists(registryPath)) {
-        std::cerr << "Error: Registry path not found at " << registryPath << "\n";
-        std::cerr << "Please clone the registry repo and set DUCK_REGISTRY_PATH or place it at ../duck-registry\n";
-        std::remove(tarball.c_str());
-        return;
+        std::cout << "Cloning registry to " << registryPath << "...\n";
+        std::filesystem::create_directories(home + "/.duck");
+        std::string cmd = "git clone " + registryUrl + " " + registryPath;
+        if (std::system(cmd.c_str()) != 0) {
+             std::cerr << "Error: Failed to clone registry.\n";
+             std::remove(tarball.c_str());
+             return;
+        }
+    } else {
+        std::cout << "Updating registry...\n";
+        std::string cmd = "cd " + registryPath + " && git pull";
+        if (std::system(cmd.c_str()) != 0) {
+             std::cerr << "Warning: Failed to pull registry updates.\n";
+        }
     }
     
     std::string packageDir = registryPath + "/packages/" + name;
@@ -80,7 +87,14 @@ void publish() {
     f << metadata.dump(2);
     
     std::cout << "Package staged in " << packageDir << "\n";
-    std::cout << "Please commit and push the changes to the registry repository.\n";
+    
+    std::cout << "Pushing to GitHub...\n";
+    std::string pushCmd = "cd " + registryPath + " && git add . && git commit -m \"Publish " + name + " " + version + "\" && git push";
+    if (std::system(pushCmd.c_str()) != 0) {
+        std::cerr << "Error: Failed to push to GitHub. Check your credentials.\n";
+    } else {
+        std::cout << "Successfully published " << name << "@" << version << "\n";
+    }
 
     // Cleanup
     std::remove(tarball.c_str());
