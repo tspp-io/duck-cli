@@ -26,9 +26,23 @@ void install(const std::string& package) {
         size_t slashPos = package.find('/');
         installName = package.substr(slashPos + 1);
     } else {
-        // Default registry
-        std::string registryUrl = "http://localhost:8080/api/packages/" + package;
-        downloadUrl = "http://localhost:8080/tarballs/" + package + ".tar.gz";
+        // Default registry (Static GitHub Registry)
+        // https://raw.githubusercontent.com/tspp-io/duck-registery/main/packages/<pkg>/<pkg>-latest.tar.gz
+        // Or we should read metadata first. For simplicity, let's assume a convention.
+        
+        // Let's try to fetch metadata first to find the latest version
+        std::string metaUrl = "https://raw.githubusercontent.com/tspp-io/duck-registery/main/packages/" + package + "/metadata.json";
+        // TODO: Implement fetch string in HttpClient to parse JSON.
+        // For now, we will assume a 'latest' tarball exists or just try to download a fixed name.
+        
+        // Let's assume the registry has a 'latest.tar.gz' symlink or copy for simplicity in this static model
+        // OR we just fail if we can't read metadata.
+        
+        // Since we don't have a JSON parser fully integrated for HTTP responses yet (only file reading),
+        // let's assume the user wants the 'latest' version and the registry stores it as `latest.tar.gz`
+        // inside the package folder.
+        
+        downloadUrl = "https://raw.githubusercontent.com/tspp-io/duck-registery/main/packages/" + package + "/latest.tar.gz";
     }
 
     std::cout << "Downloading from " << downloadUrl << "...\n";
